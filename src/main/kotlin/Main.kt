@@ -1,10 +1,13 @@
+import org.apache.kafka.clients.producer.Callback
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringSerializer
+import org.slf4j.LoggerFactory
 import java.util.*
 
 fun main() {
+    val logger = LoggerFactory.getLogger("MyCustomLogger")
     val properties = Properties()
     val bootstrapServers = "localhost:9092"
     properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
@@ -14,11 +17,27 @@ fun main() {
     val producer: KafkaProducer<String, String> = KafkaProducer(properties)
 
     val topicName = "custom_topic"
-    val message = "opa"
-    val producerRecord: ProducerRecord<String, String> = ProducerRecord(topicName, message)
+    repeat(200) {
+        val message = "opa $it"
+        val producerRecord: ProducerRecord<String, String> = ProducerRecord(topicName, message)
+        producer.send(producerRecord, Callback { metadata, exception ->
+            run {
+                if (exception == null) {
+                    val logMessage = """
+                    Received new metadata.
+                    Topic: ${metadata.topic()}
+                    Partition: ${metadata.partition()}
+                    Offset: ${metadata.offset()}
+                    Timestamp: ${metadata.timestamp()}
+                """.trimIndent()
+                    logger.info(logMessage)
+                } else {
+                    logger.error("Error while producing", exception)
+                }
+            }
+        })
+    }
+//    producer.flush()
 
-    producer.send(producerRecord)
-    producer.flush()
-
-    // producer.close() // Flush and close
+     producer.close() // Flush and close
 }
