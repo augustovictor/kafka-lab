@@ -14,12 +14,16 @@ fun main() {
     properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer::class.java.canonicalName)
     properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer::class.java.canonicalName)
 
-    val producer: KafkaProducer<String, String> = KafkaProducer(properties)
+    val producer = KafkaProducer<String, String>(properties)
 
     val topicName = "custom_topic"
     repeat(200) {
         val message = "opa $it"
-        val producerRecord: ProducerRecord<String, String> = ProducerRecord(topicName, message)
+        val key = "id_$it"
+        val producerRecord: ProducerRecord<String, String> = ProducerRecord(topicName, key, message)
+
+        logger.info("Current key: $key")
+
         producer.send(producerRecord, Callback { metadata, exception ->
             run {
                 if (exception == null) {
@@ -36,6 +40,7 @@ fun main() {
                 }
             }
         })
+
     }
 //    producer.flush()
 
